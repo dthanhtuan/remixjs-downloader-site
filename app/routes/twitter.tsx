@@ -1,8 +1,9 @@
 import {Fragment, useState} from "react";
 import {Listbox, Transition} from "@headlessui/react";
 import type {MetaFunction, ActionFunction} from "@remix-run/node";
+import {Link, Form, json, useActionData} from "@remix-run/react";
 import {downloadContent} from "~/utils/download";
-import {Form, json, useActionData} from "@remix-run/react";
+import GoogleAds from "~/components/GoogleAds";
 
 export const meta: MetaFunction = () => {
     return [
@@ -11,10 +12,10 @@ export const meta: MetaFunction = () => {
     ];
 };
 
-export let action: ActionFunction = async ({request}) => {
-    let formData = await request.formData();
-    let url = formData.get('url');
-    let downloadLink = await downloadContent(url);
+export const action: ActionFunction = async ({request}) => {
+    const formData = await request.formData();
+    const url = formData.get('url');
+    const downloadLink = await downloadContent(url);
     return json({downloadLink});
 };
 
@@ -33,8 +34,8 @@ export default function Twitter() {
                 <div className="container mx-auto flex justify-between items-center px-6">
                     <h1 className="text-2xl font-semibold text-blue-600">Twiter Download</h1>
                     <div className="space-x-6">
-                        <a href="#" className="text-gray-600 hover:text-blue-500">Home</a>
-                        <a href="#" className="text-gray-600 hover:text-blue-500">How to use</a>
+                        <Link to="/" className="text-gray-600 hover:text-blue-500">Home</Link>
+                        <Link to="#howtouse" className="text-gray-600 hover:text-blue-500">How to use</Link>
                     </div>
                 </div>
             </nav>
@@ -75,12 +76,14 @@ export default function Twitter() {
                     <li><strong>Download the video</strong> - Choose your resolution and click Download.</li>
                 </ul>
             </section>
+            <GoogleAds/>
         </div>
+
     );
 }
 
 // FAQ Component
-function FaqItem({question, answer}: {question: string, answer: string}) {
+function FaqItem({question, answer}: { question: string, answer: string }) {
     return (
         <Listbox>
             {({open}) => (
