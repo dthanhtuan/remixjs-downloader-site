@@ -1,4 +1,7 @@
-import axios from 'axios';
+import ytdl from 'ytdl-core';
+import {createWriteStream} from 'fs';
+import {join} from 'path';
+import {tmpdir} from 'os';
 
 export async function downloadContent(url) {
     if (url.includes('twitter.com')) {
@@ -7,6 +10,8 @@ export async function downloadContent(url) {
         return await downloadFromFacebook(url);
     } else if (url.includes('tiktok.com')) {
         return await downloadFromTikTok(url);
+    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        return await downloadFromYoutube(url);
     } else {
         throw new Error('Unsupported URL');
     }
@@ -22,4 +27,24 @@ async function downloadFromFacebook(url) {
 
 async function downloadFromTikTok(url) {
     return 'https://example.com/tiktok-video.mp4';
+}
+
+// FIXME: the download output path is not working, File wasn't available on site error
+async function downloadFromYoutube(url) {
+    const videoId = ytdl.getURLVideoID(url);
+    const outputPath = join(tmpdir(), `${videoId}.mp4`);
+    const videoStream = ytdl(url, {quality: 'highest'});
+
+    return new Promise((resolve, reject) => {
+        const fileStream = createWriteStream(outputPath);
+        videoStream.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+            resolve(outputPath);
+        });
+
+        fileStream.on('error', (error) => {
+            reject(error);
+        });
+    });
 }

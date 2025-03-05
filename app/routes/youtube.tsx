@@ -1,5 +1,5 @@
 import {useState} from "react";
-import {Link,Form, json, useActionData} from "@remix-run/react";
+import {Link, Form, json, useActionData} from "@remix-run/react";
 import type {MetaFunction, ActionFunction} from "@remix-run/node";
 import {downloadContent} from "~/utils/download";
 import GoogleAds from "~/components/GoogleAds";
@@ -54,11 +54,25 @@ export default function Youtube() {
                     />
                     <button type="submit" className="bg-blue-600 text-white px-5 py-3 rounded-md ml-3">Download</button>
                 </Form>
-                {actionData && (
+                <div className="mt-6 text-center">
+                    {url && (
+                        <iframe
+                            title="YouTube video player"
+                            width="560"
+                            height="315"
+                            src={`https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        ></iframe>
+                    )}
+                </div>
+                {actionData && actionData.downloadLink && (
                     <div className="mt-6 text-center">
-                        <a href={actionData.downloadLink} className="text-blue-500 underline">
+                        <Link to={actionData.downloadLink} download={actionData.downloadLink} reloadDocument
+                              className="text-blue-500 underline">
                             Download your file
-                        </a>
+                        </Link>
                     </div>
                 )}
             </section>
