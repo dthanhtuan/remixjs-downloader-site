@@ -1,9 +1,9 @@
 import {useState} from "react";
 import {Link, Form, useActionData, useNavigation} from "@remix-run/react";
-import { json } from '@remix-run/node';
+import {json} from '@remix-run/node';
 import type {MetaFunction, ActionFunction} from "@remix-run/node";
-import {downloadContent} from "~/utils/download";
 import GoogleAds from "~/components/GoogleAds";
+import {downloadVidFromYoutube} from "~/utils/download";
 
 export const meta: MetaFunction = () => {
     return [
@@ -15,20 +15,53 @@ export const meta: MetaFunction = () => {
 export const action: ActionFunction = async ({request}) => {
     const formData = await request.formData();
     const url = formData.get('url');
-    const { downloadLink, title } = await downloadContent(url);
-    return json({ downloadLink, title });
+    const itag = formData.get('itag');
+
+    if (itag) {
+        const videoId = formData.get('videoId');
+        const title = formData.get('title');
+        const result = await downloadVidFromYoutube(url, itag, videoId, title);
+        return json({downloadLink: result.downloadLink, title});
+    }
 };
 
 type ActionData = {
-    downloadLink: string;
-    title: string;
+    downloadLink?: string;
+    title?: string;
 };
 
 export default function Youtube() {
     const actionData = useActionData<ActionData>();
     const [url, setUrl] = useState('');
+    const [itag, setItag] = useState('');
+    const [videoInfo, setVideoInfo] = useState<{
+        availableFormats: { quality: string; itag: string }[],
+        title: string,
+        videoId: string
+    } | null>(null);
     const navigation = useNavigation();
     const isLoading = navigation.state === "submitting";
+
+    const fetchVideoInfo = async () => {
+        console.log("fetchVideoInfo called");
+        try {
+            const formData = new FormData();
+            formData.append('url', url);
+
+            const response = await fetch('/api/video-info', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            setVideoInfo(data.videoInfo);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error("Error fetching video info:", error.message);
+            } else {
+                console.error("An unknown error occurred while fetching video info");
+            }
+        }
+    };
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -46,7 +79,6 @@ export default function Youtube() {
                 <h2 className="text-3xl font-bold">
                     <span className="text-blue-600">Youtube</span> Video Downloader
                 </h2>
-                <p className="text-gray-600 mt-2">Download Youtube videos from any post.</p>
                 <Form method="post" className="mt-6 flex justify-center">
                     <input
                         type="text"
@@ -56,22 +88,52 @@ export default function Youtube() {
                         placeholder="Enter a Youtube Video Link e.g. https://youtube.com/..."
                         className="border border-gray-300 p-3 w-1/2 rounded-md"
                     />
-                    <button type="submit" className="bg-blue-600 text-white px-5 py-3 rounded-md ml-3">Download</button>
-                </Form>
-                <div className="mt-6 text-center">
-                    {url && (
-                        <iframe
-                            title="YouTube video player"
-                            width="560"
-                            height="315"
-                            src={`https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        ></iframe>
+                    <button type="button" onClick={fetchVideoInfo}
+                            className="bg-blue-600 text-white px-5 py-3 rounded-md ml-3">Get Video
+                    </button>
+
+                    <div className="mt-6 text-center">
+                        {url && (
+                            <iframe
+                                title="YouTube video player"
+                                width="560"
+                                height="315"
+                                src={`https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`}
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            ></iframe>
+                        )}
+                        {isLoading && <p className="mt-6 text-center text-gray-600">Processing, please wait...</p>}
+                    </div>
+                    {videoInfo && (
+                        <>
+                            <input type="hidden" name="videoId" value={videoInfo.videoId}/>
+                            <input type="hidden" name="title" value={videoInfo.title}/>
+                            <div className="flex justify-center items-center">
+                                <select
+                                    name="itag"
+                                    value={itag}
+                                    onChange={(e) => setItag(e.target.value)}
+                                    className="border border-gray-300 p-3 w-1/2 rounded-md ml-3"
+                                >
+                                    <option value="">Select Quality</option>
+                                    {videoInfo.availableFormats.map((format, index) => (
+                                        <option key={index} value={format.itag}>
+                                            {format.quality}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="submit"
+                                    className="bg-blue-600 text-white px-5 py-3 rounded-md ml-3"
+                                >
+                                    Get Download Link
+                                </button>
+                            </div>
+                        </>
                     )}
-                    {isLoading && <p className="mt-6 text-center text-gray-600">Downloading video, please wait...</p>}
-                </div>
+                </Form>
                 {actionData && actionData.downloadLink && !isLoading && (
                     <div className="mt-6 text-center">
                         <h3 className="text-xl font-semibold mb-4">{actionData.title}</h3>
