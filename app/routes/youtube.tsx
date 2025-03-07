@@ -1,5 +1,6 @@
 import {useState} from "react";
-import {Link, Form, json, useActionData} from "@remix-run/react";
+import {Link, Form, useActionData, useNavigation} from "@remix-run/react";
+import { json } from '@remix-run/node';
 import type {MetaFunction, ActionFunction} from "@remix-run/node";
 import {downloadContent} from "~/utils/download";
 import GoogleAds from "~/components/GoogleAds";
@@ -14,17 +15,20 @@ export const meta: MetaFunction = () => {
 export const action: ActionFunction = async ({request}) => {
     const formData = await request.formData();
     const url = formData.get('url');
-    const downloadLink = await downloadContent(url);
-    return json({downloadLink});
+    const { downloadLink, title } = await downloadContent(url);
+    return json({ downloadLink, title });
 };
 
 type ActionData = {
     downloadLink: string;
+    title: string;
 };
 
 export default function Youtube() {
     const actionData = useActionData<ActionData>();
     const [url, setUrl] = useState('');
+    const navigation = useNavigation();
+    const isLoading = navigation.state === "submitting";
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -66,9 +70,11 @@ export default function Youtube() {
                             allowFullScreen
                         ></iframe>
                     )}
+                    {isLoading && <p className="mt-6 text-center text-gray-600">Downloading video, please wait...</p>}
                 </div>
-                {actionData && actionData.downloadLink && (
+                {actionData && actionData.downloadLink && !isLoading && (
                     <div className="mt-6 text-center">
+                        <h3 className="text-xl font-semibold mb-4">{actionData.title}</h3>
                         <Link to={actionData.downloadLink} download={actionData.downloadLink} reloadDocument
                               className="text-blue-500 underline">
                             Download your file

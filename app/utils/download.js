@@ -29,21 +29,23 @@ async function downloadFromTikTok(url) {
     return 'https://example.com/tiktok-video.mp4';
 }
 
-// FIXME: the download output path is not working, File wasn't available on site error
 async function downloadFromYoutube(url) {
     const videoId = ytdl.getURLVideoID(url);
+    const info = await ytdl.getInfo(url);
+    const title = info.videoDetails.title;
     const outputPath = join(tmpdir(), `${videoId}.mp4`);
-    const videoStream = ytdl(url, {quality: 'highest'});
+    const videoStream = ytdl(url, { quality: 'highestvideo' });
 
     return new Promise((resolve, reject) => {
         const fileStream = createWriteStream(outputPath);
         videoStream.pipe(fileStream);
 
         fileStream.on('finish', () => {
-            resolve(outputPath);
+            resolve({ downloadLink: `/download/${videoId}`, title });
         });
 
         fileStream.on('error', (error) => {
+            console.error(`Error writing file: ${error.message}`);
             reject(error);
         });
     });
